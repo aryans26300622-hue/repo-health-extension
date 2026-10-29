@@ -79,6 +79,18 @@ function runInfoChecks(data) {
   ];
 }
 
+
+// ⭐ One short "how to fix" tip per check (shown only when the check fails)
+const FIXES = {
+  "README exists": "Add a README.md that explains what the project does and how to run it.",
+  "LICENSE exists": "Add a LICENSE file. choosealicense.com helps you pick one.",
+  ".gitignore exists": "Add a .gitignore so build and editor files stay out of the repo.",
+  "No sensitive files committed": "Remove these files, add them to .gitignore, and replace any real keys, because they stay in git history.",
+  "No junk files committed": "Remove these files and add them to .gitignore (for example node_modules/ and .DS_Store).",
+  "Active in the last 90 days": "Push a small update, or say in the README that the project is complete.",
+  "Live demo / website link set": "Add your live link in the repo's About section, in the Website field.",
+};
+
 // ---------- The panel ----------
 
 // ⭐ Small helper: creates an element and sets its text safely (no innerHTML)
@@ -132,6 +144,7 @@ function showResults(checks) {
     item.appendChild(el("span", "rhp-icon", c.pass ? "✅" : "❌"));
     item.appendChild(el("span", "rhp-label", c.check));
     if (!c.pass && c.found) item.appendChild(el("div", "rhp-found", c.found));
+    if (!c.pass && FIXES[c.check]) item.appendChild(el("div", "rhp-fix", "💡 " + FIXES[c.check]));
     list.appendChild(item);
   }
   body.appendChild(list);
