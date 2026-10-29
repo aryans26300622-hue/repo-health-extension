@@ -70,6 +70,15 @@ function runFileChecks(paths) {
   ];
 }
 
+// ⭐ Checks that use the repo info we already fetched (no extra API call)
+function runInfoChecks(data) {
+  const daysSincePush = (Date.now() - new Date(data.pushed_at).getTime()) / (1000 * 60 * 60 * 24);
+  return [
+    { check: "Active in the last 90 days", pass: daysSincePush <= 90 },
+    { check: "Live demo / website link set", pass: Boolean(data.homepage && data.homepage.trim()) },
+  ];
+}
+
 // ---------- The panel ----------
 
 // ⭐ Small helper: creates an element and sets its text safely (no innerHTML)
@@ -150,7 +159,7 @@ async function getChecks(repoInfo) {
   const data = await fetchRepoInfo(repoInfo);
   const tree = await fetchTree(repoInfo, data.default_branch);
   const paths = tree.tree.filter((t) => t.type === "blob").map((t) => t.path);
-  const checks = runFileChecks(paths);
+  const checks = [...runFileChecks(paths), ...runInfoChecks(data)];
 
   cache.set(key, { time: Date.now(), checks });
   return checks;
