@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Repo Health Panel",
+  "version": "1.0.0",
+  "description": "Shows a quick health score for any public GitHub repository.",
+  "host_permissions": ["https://api.github.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content.js"],
+      "css": ["panel.css"]
+    }
+  ]
+}
