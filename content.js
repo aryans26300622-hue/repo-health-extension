@@ -5,7 +5,11 @@ const RESERVED = [
   "pricing", "new"
 ];
 
-// ⭐ Read owner and repo name from the URL: /facebook/react -> facebook, react
+// ⭐ Folders that hold test data, not real project secrets
+const SAFE_DIRS = ["fixtures", "__fixtures__", "test", "tests", "__tests__", "example", "examples", "sample", "samples"];
+
+// ---------- Reading the page ----------
+
 function getRepoFromUrl() {
   const parts = location.pathname.split("/").filter(Boolean);
   if (parts.length < 2) return null;
@@ -14,7 +18,8 @@ function getRepoFromUrl() {
   return { owner, repo };
 }
 
-// ⭐ One public API call for the basic repo info (no login, no key)
+// ---------- GitHub API ----------
+
 async function fetchRepoInfo({ owner, repo }) {
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
   if (res.status === 403 || res.status === 429) throw new Error("RATE_LIMIT");
@@ -23,7 +28,6 @@ async function fetchRepoInfo({ owner, repo }) {
   return res.json();
 }
 
-// ⭐ One API call returns every file path in the repo
 async function fetchTree({ owner, repo }, branch) {
   const res = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
@@ -33,9 +37,7 @@ async function fetchTree({ owner, repo }, branch) {
   return res.json();
 }
 
-// ⭐ Every check returns { check, pass }
-// ⭐ Folders that hold test data, not real project secrets
-const SAFE_DIRS = ["fixtures", "__fixtures__", "test", "tests", "__tests__", "example", "examples", "sample", "samples"];
+// ---------- Checks ----------
 
 function inSafeDir(path) {
   const folders = path.toLowerCase().split("/").slice(0, -1);
@@ -67,21 +69,86 @@ function runFileChecks(paths) {
     { check: "No junk files committed", pass: junk.length === 0, found: junk.slice(0, 5).join(", ") },
   ];
 }
+
+// ---------- The panel ----------
+
+// ⭐ Small helper: creates an element and sets its text safely (no innerHTML)
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function removePanel() {
+  const old = document.getElementById("rhp-panel");
+  if (old) old.remove();
+}
+
+// ⭐ Builds the empty panel shell and returns its body to fill
+function createPanel() {
+  removePanel();
+  const panel = el("div", "rhp-panel");
+  panel.id = "rhp-panel";
+
+  const header = el("div", "rhp-header");
+  header.appendChild(el("span", "rhp-title", "Repo Health"));
+  const close = el("button", "rhp-close", "×");
+  close.addEventListener("click", removePanel);
+  header.appendChild(close);
+
+  const body = el("div", "rhp-body");
+  panel.appendChild(header);
+  panel.appendChild(body);
+  document.body.appendChild(panel);
+  return body;
+}
+
+function showMessage(text) {
+  const body = createPanel();
+  body.appendChild(el("p", "rhp-message", text));
+}
+
+function showResults(checks) {
+  const passed = checks.filter((c) => c.pass).length;
+  const score = Math.round((passed / checks.length) * 100);
+  const level = score >= 80 ? "rhp-good" : score >= 50 ? "rhp-ok" : "rhp-bad";
+
+  const body = createPanel();
+  body.appendChild(el("div", "rhp-score " + level, score + "/100"));
+
+  const list = el("ul", "rhp-list");
+  for (const c of checks) {
+    const item = el("li", "rhp-item");
+    item.appendChild(el("span", "rhp-icon", c.pass ? "✅" : "❌"));
+    item.appendChild(el("span", "rhp-label", c.check));
+    if (!c.pass && c.found) item.appendChild(el("div", "rhp-found", c.found));
+    list.appendChild(item);
+  }
+  body.appendChild(list);
+}
+
+// ⭐ Turn error codes into friendly messages
+function errorText(code) {
+  if (code === "RATE_LIMIT") return "GitHub's request limit was reached. Please try again in a few minutes.";
+  if (code === "NOT_FOUND") return "This repo is private or doesn't exist, so it can't be checked.";
+  return "Something went wrong while checking this repo (" + code + ").";
+}
+
+// ---------- Start ----------
+
 async function init() {
   const repoInfo = getRepoFromUrl();
-  if (!repoInfo) {
-    console.log("Repo Health Panel: not a repo page");
-    return;
-  }
+  if (!repoInfo) return;
+
+  showMessage("Checking repository…");
   try {
     const data = await fetchRepoInfo(repoInfo);
     const tree = await fetchTree(repoInfo, data.default_branch);
     const paths = tree.tree.filter((t) => t.type === "blob").map((t) => t.path);
-
-    if (tree.truncated) console.log("Repo Health Panel: file list was truncated (very large repo)");
-    console.table(runFileChecks(paths));
+    showResults(runFileChecks(paths));
   } catch (err) {
-    console.log("Repo Health Panel error:", err.message);
+    showMessage(errorText(err.message));
   }
 }
 
