@@ -3,6 +3,17 @@
 A Chrome extension that shows a quick health score for any public GitHub repository, right on the repo page.
 
 Open a repo like github.com/facebook/react and a small panel appears in the bottom-right corner with a score out of 100 and a checklist of what is good and what is missing.
+Every failed check also shows a short how-to-fix tip, so the panel works as a to-do list for improving a repo, not only a scoreboard.
+
+## Screenshots
+
+A healthy repo (github.com/react/react):
+
+![Healthy repo scoring 100/100](screenshots/healthy.png)
+
+A repo with problems. Committed node_modules and key files are listed by name, with a tip for each failed check:
+
+![Repo with failed checks and fix tips](screenshots/problems.png)
 
 ## What it checks (7 checks)
 
@@ -45,11 +56,36 @@ The score is the share of checks that pass. Failed checks for sensitive and junk
 - Some flagged files may be harmless (for example, development certificates), because the checker only looks at file names, not contents.
 - Very large repos can have a truncated file list from GitHub.
 
+## Testing evidence
+
+Tested manually in Chrome on real GitHub pages:
+
+| Test | Expected | Result |
+|---|---|---|
+| github.com/react/react | 100/100, no tips | Pass |
+| This repo before it had a README and LICENSE | Both checks fail, with tips | Pass |
+| react/react-native-devtools-frontend | Committed node_modules and key files flagged by name | Pass |
+| Non-existent repo URL | Friendly "private or doesn't exist" message, no stuck loading state | Pass |
+| github.com/settings and a user profile page | No panel shown | Pass |
+| Opening a repo from an org page without reloading | Panel appears and updates | Pass |
+
+A bug found through testing: react/react was first flagged for "sensitive files" because of test .env files inside its fixtures folder. The check now ignores test, fixture and example folders (see Known limitations).
+
+The GitHub rate-limit message is handled in code but was not triggered during testing.
+
+## How AI was used
+
+- The design and code were developed with Claude (Anthropic) in a step-by-step conversation: one small feature per step.
+- Each step was run and tested in Chrome before moving on, and each change went through its own branch and pull request (8 PRs).
+- Testing caught a real false positive (the fixtures .env files), which led to a design change.
+- Security design: one host permission (api.github.com), page text inserted with textContent instead of innerHTML, and nothing stored on disk.
+- The full conversation is available as the AI transcript in the submission.
+
 ## Ideas for later
 
 - Checks for tests, CI and releases
 - Optional GitHub token for higher rate limits
-- Auto-fix suggestions
+- One-click fixes (tips are shown today)
 
 ## License
 
