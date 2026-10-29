@@ -100,7 +100,7 @@ function createPanel() {
   const body = el("div", "rhp-body");
   panel.appendChild(header);
   panel.appendChild(body);
-  document.body.appendChild(panel);
+  document.documentElement.appendChild(panel);
   return body;
 }
 
@@ -137,19 +137,48 @@ function errorText(code) {
 
 // ---------- Start ----------
 
-async function init() {
+const CACHE_MINUTES = 10;
+const cache = new Map(); // "owner/repo" -> { time, checks }
+let currentKey = null;
+
+// ⭐ Return cached results if fresh, otherwise call the API
+async function getChecks(repoInfo) {
+  const key = repoInfo.owner + "/" + repoInfo.repo;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.time < CACHE_MINUTES * 60 * 1000) return hit.checks;
+
+  const data = await fetchRepoInfo(repoInfo);
+  const tree = await fetchTree(repoInfo, data.default_branch);
+  const paths = tree.tree.filter((t) => t.type === "blob").map((t) => t.path);
+  const checks = runFileChecks(paths);
+
+  cache.set(key, { time: Date.now(), checks });
+  return checks;
+}
+
+// ⭐ Runs whenever the page might have changed to a different repo
+async function update() {
   const repoInfo = getRepoFromUrl();
-  if (!repoInfo) return;
+  const key = repoInfo ? repoInfo.owner + "/" + repoInfo.repo : null;
+
+  if (key === currentKey) return; // same repo, nothing to do
+  currentKey = key;
+
+  if (!repoInfo) {
+    removePanel(); // left the repo (e.g. went to a profile page)
+    return;
+  }
 
   showMessage("Checking repository…");
   try {
-    const data = await fetchRepoInfo(repoInfo);
-    const tree = await fetchTree(repoInfo, data.default_branch);
-    const paths = tree.tree.filter((t) => t.type === "blob").map((t) => t.path);
-    showResults(runFileChecks(paths));
+    const checks = await getChecks(repoInfo);
+    if (key !== currentKey) return; // user already moved on, ignore this result
+    showResults(checks);
   } catch (err) {
+    if (key !== currentKey) return;
     showMessage(errorText(err.message));
   }
 }
 
-init();
+update();
+setInterval(update, 500); // ⭐ GitHub changes pages without reloading, so we check the URL twice a second
