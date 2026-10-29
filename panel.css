@@ -1,1 +1,51 @@
 /* panel styles go here */
+.rhp-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 280px;
+  z-index: 99999;
+  background: #161b22;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font: 14px/1.4 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.rhp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid #30363d;
+  font-weight: 600;
+}
+.rhp-close {
+  background: none;
+  border: none;
+  color: #8b949e;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+.rhp-close:hover { color: #e6edf3; }
+.rhp-body { padding: 12px 14px; }
+.rhp-message { margin: 0; color: #8b949e; }
+.rhp-score { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+.rhp-good { color: #3fb950; }
+.rhp-ok { color: #d29922; }
+.rhp-bad { color: #f85149; }
+.rhp-list { list-style: none; margin: 0; padding: 0; }
+.rhp-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 5px 0;
+}
+.rhp-found {
+  width: 100%;
+  padding-left: 26px;
+  font-size: 12px;
+  color: #f85149;
+  word-break: break-all;
+}
